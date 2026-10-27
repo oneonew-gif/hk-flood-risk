@@ -89,8 +89,8 @@ hk-flood-risk/
 ├── configs/               # 模型与流程设置
 ├── scripts/               # 数据审计、实验与结果整理脚本
 ├── tests/                 # 自动化测试
-├── reports/               # 研究报告与质量核验
 ├── HANDOFF/               # 项目结构与交接说明
+├── CONTRIBUTING.md        # 团队协作、数据获取与提交检查
 ├── PROJECT_PRINCIPLES.md  # 长期研发规范
 ├── ITERATIONS.md          # 项目迭代记录
 └── CHANGELOG.md           # 主要变更记录
@@ -118,7 +118,7 @@ Windows 用户需要使用对应的虚拟环境激活命令。macOS 如果提示
 node hko_api/district/tests/bulletin.test.mjs
 ```
 
-具体建模操作、参数与实验复现路径，请参考 `HANDOFF/`、`reports/` 和 `configs/`。请勿直接覆盖已冻结的研究数据和模型结果。
+同学参与修改前，请先阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md) 和 [`HANDOFF/00_START_HERE.md`](HANDOFF/00_START_HERE.md)。具体建模操作与参数见 `HANDOFF/` 和 `configs/`；内部研究报告、正式数据与模型产物不随 Git 仓库分发，由项目负责人通过团队共享存储提供。请勿直接覆盖已冻结的研究数据和模型结果。
 
 ## 项目接下来会做什么？
 

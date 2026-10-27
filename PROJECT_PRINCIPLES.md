@@ -2,7 +2,7 @@
 
 > 版本：v1.0（2026-10-27 由项目负责人正式确认）
 > 适用范围：本仓库全部开发、实验、报告与交付活动，长期有效，直到下一次书面修订。
-> 关系：本文件为**人读版规范**；AI 侧执行摘要见 `~/.trae-cn/memory/projects/.../project_memory.md` 的「双轨开发规范」章节，二者冲突时以本文件为准。
+> 本文件是团队协作时共同遵守的人读版规范；如与历史实验记录冲突，以本文件和最新已确认决策为准。
 
 ---
 
@@ -24,7 +24,7 @@
 
 - 保留全部正式冻结的训练数据、模型、指标、图表，**不覆盖、不改写**
 - 论文方法与结果必须**可追溯、可复现**（含数据哈希、随机种子、阈值选定过程、代码路径）
-- 维护**论文交付清单**，逐项标记「已完成 / 待验证 / 缺失」→ [paper_delivery_checklist.md](reports/paper_delivery_checklist.md)
+- 维护**论文交付清单**，逐项标记「已完成 / 待验证 / 缺失」；该清单位于团队共享材料的 `reports/paper_delivery_checklist.md`，不纳入 Git
 - 新实验**只有通过独立验证**后，才可考虑纳入论文正式结果；未验证的只能作为探索性记录，单独放独立目录并标注版本
 
 ### 1.2 产品轨道（Product track）
@@ -59,7 +59,7 @@
 | SHAP | `.../formal_training_.../shap_importance.csv` | dual_xgb 全局贡献 |
 | GIS 评分 | `.../formal_training_.../gis/grid_risk_500m.csv`、`outputs/paper_package_b1_20261026-122643/tables/grid_risk_test_period_500m.csv` | 全期均值 ≠ 测试期均值，引用必须标口径 |
 | 图表 / 表格 | `outputs/paper_package_b1_20261026-122643/{figures,tables}/` | 5 图 + 6 表，`MANIFEST.sha256` 校验 |
-| 论文交付目录 | `~/Desktop/论文四表填充_20261026/` | 冻结交付，不得修改、覆盖、删除 |
+| 论文交付材料 | 团队共享存储中的冻结版本 | 不纳入 Git；不得修改、覆盖或删除，具体位置由项目负责人向协作者提供 |
 | 实时数据 | `hko_api/data/` | 带时间戳归档，与论文历史实验数据完全隔离 |
 
 新增实验一律写入**新的带日期版本目录**（如 `outputs/<实验名>_<YYYYMMDD-HHMMSS>/`），禁止原地修改旧目录。

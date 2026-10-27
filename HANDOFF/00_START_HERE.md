@@ -1,7 +1,7 @@
 # 00 · START HERE — 香港智慧防洪项目交接入口
 
 > 生成日期：2026-10-27　｜　生成方式：对当前仓库全量只读核查后编写
-> 本目录（`HANDOFF/`）为跨平台迁移交接包，供新 Agent 接手。除本目录外未修改仓库任何文件。
+> 本目录（`HANDOFF/`）是团队技术交接包，供新协作者快速了解项目状态、约束和下一步工作。
 
 ---
 
@@ -19,9 +19,9 @@
 
 ## 2. 当前状态一句话
 
-**研究主线已完成并冻结**（修复版数据 + 6 模型正式训练 + 论文图表包 + 四表填充），**产品 MVP 已交付**（HKO 五源接入 + Dashboard + 18 区播报页），仓库 **git 零提交、无远程、无 LICENSE**，论文尚有若干「待验证/缺失」项（见 `reports/paper_delivery_checklist.md`）。
+**研究主线已完成并冻结**（修复版数据 + 6 模型正式训练 + 论文图表包 + 四表填充），**产品 MVP 已交付**（HKO 五源接入 + Dashboard + 18 区播报页）。当前私有 GitHub 仓库用于团队协作；正式数据、模型与论文产物不随 Git 仓库分发，获取方式见根目录 `CONTRIBUTING.md`。
 
-## 3. 最重要的五条事实（新 Agent 必读）
+## 3. 最重要的五条事实（新协作者必读）
 
 1. **所有模型指标是弱监督标签下的探索性结果**，标签 = A 类空间规则 × HKO 官方红/黑暴雨警告窗口（`rstorm.dat` 核验，56 个官方事件日），**不是实测水浸记录**；模型输出只能称「弱监督相对风险评分」，**严禁**称为「真实水浸概率」。
 2. **冻结产物不可覆盖**：`data/delivery_repaired_b1/`（SHA256 `1749cc00…5cb4e8`）、`outputs/formal_training_repaired_b1_20261026-020814/`、`outputs/supplement_tide_ablation_b1_20261026-024612/`、`outputs/paper_package_b1_20261026-122643/`。新实验必须写入新的带日期目录。
@@ -52,7 +52,7 @@ python -m pytest
 | 1 | `HANDOFF/05_DECISIONS_AND_CONSTRAINTS.md` | 先知道什么**不能做** |
 | 2 | `PROJECT_PRINCIPLES.md` | 双轨规范全文（人读版） |
 | 3 | `HANDOFF/03_MODEL_RESEARCH.md` | 研究成果与冻结产物索引 |
-| 4 | `reports/paper_delivery_checklist.md` | 论文交付项 已完成/待验证/缺失 |
+| 4 | 团队共享材料中的 `reports/paper_delivery_checklist.md` | 论文交付项 已完成/待验证/缺失（不在 Git 仓库中） |
 | 5 | `HANDOFF/01_ARCHITECTURE.md` | 代码与数据流全貌 |
 | 6 | `ITERATIONS.md` | 24 条迭代记录（全部历史决策的来龙去脉） |
 | 7 | `README.md` | 建模框架使用说明 |
@@ -69,16 +69,8 @@ python -m pytest
 | `05_DECISIONS_AND_CONSTRAINTS.md` | 已确认决策、研究红线、审批机制 |
 | `06_PENDING_TASKS.md` | 未完成任务（P0/P1/P2，研究/产品分列） |
 | `07_ENVIRONMENT_SETUP.md` | 环境、依赖、启动、测试、故障 |
-| `08_GITHUB_RELEASE_AUDIT.md` | GitHub 发布适配性检查（仅检查，不执行） |
-| `09_AGENT_INSTRUCTIONS.md` | 新 Agent 的长期工作规则 |
-| `FILE_MANIFEST.csv` | 关键文件清单（路径/用途/大小/SHA256/冻结状态） |
+| `FILE_MANIFEST.csv` | 关键文件与冻结研究产物清单（部分产物不在 Git 中） |
 
-## 7. 交接时的运行中进程（2026-10-27 14:40 实测）
+## 7. 本地服务说明
 
-| 进程 | 启动时间 | 说明 |
-|---|---|---|
-| `.venv/bin/python -m hko_api.hko_fetch --loop`（PID 69070） | 2026-10-26 下午 | HKO 五源轮询抓取，持续写入 `hko_api/data/` |
-| `.venv/bin/python -m http.server 8321 --bind 127.0.0.1`（PID 66215） | 2026-10-26 中午 | Dashboard 本地服务 |
-| `python -m http.server 8322 --bind 127.0.0.1 --directory /tmp/t6_fixtures`（PID 49015） | 2026-10-27 14:10 | T6 测试夹具临时服务（可忽略） |
-
-> 迁移后如需在新环境重启，先确认旧机器上这两个长期进程已停止，避免端口与归档目录冲突。停止/重启方法见 `04_PRODUCT_STATUS.md` §6。
+仓库不记录任何协作者机器上的 PID 或运行状态。启动、停止和端口排查命令见 `04_PRODUCT_STATUS.md` §6；每位协作者应只管理自己机器上的进程与 `hko_api/data/` 归档。

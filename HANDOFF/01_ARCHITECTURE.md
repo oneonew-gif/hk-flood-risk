@@ -110,7 +110,7 @@ scripts/run_paper_package_b1.py ──► outputs/paper_package_b1_20261026-1226
    ▼
 outputs/paper_tables_fill_20261026/（四表填充 + docx 审核副本）
    ▼
-~/Desktop/论文四表填充_20261026.zip（桌面交付副本，见 05 §外部产物）
+团队共享存储中的论文交付包（不纳入 Git，见 05 §外部产物）
 ```
 
 ## 6. 数据流（产品轨道）

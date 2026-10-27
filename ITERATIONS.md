@@ -315,6 +315,6 @@
   - **更新** `hko_api/district/index.html`：注明雨量分级为本产品展示规则、非天文台官方分级
   - **新建** `hko_api/district/README.md`：运行步骤、测试命令、字段口径、异常处理、限制与来源声明
   - **更新** `.gitignore`：排除 `hko_api/data/raw/`（276 MB / 2,837 文件）
-  - **新建** `hko_api/district/reports/t6_release_checklist.md`：10 项检查 + 4 个阻塞/待确认项 + 发布前命令清单
+  - 当时曾建立 GitHub 发布检查清单；仓库转为私有协作后，该失效清单已删除，保留本条作为历史记录
 - 验证：`node hko_api/district/tests/bulletin.test.mjs` → 8 passed / 0 failed；`pytest` 167 项通过；敏感信息扫描无 key/token/私钥；`hko_api/data/latest` 1.7 MB、`district` 48 KB，可入库
 - 遗留/阻塞：B2 公开快照 30 分钟后必显示 STALE（需选择演示口径）；B3 HKO 数据再分发条款待确认；B4 仓库零提交、无 LICENSE；B6 移动端未真机实测（截图工具不可用）
