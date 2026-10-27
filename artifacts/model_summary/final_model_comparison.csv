@@ -1,0 +1,7 @@
+model,model_label,n_features,threshold_val_frozen,test_roc_auc,test_pr_auc,test_brier,test_precision,test_recall,test_f1,tp,fp,fn,alerts_per_day,positives,n,source,delta_roc_vs_dual,delta_pr_vs_dual
+dual_xgb,XGBoost（双源特征，主模型）,59,0.05,0.750942,0.18369,0.080114,0.19191,0.324075,0.241066,41162,173324,85852,156.67,127014,1496340,formal_training_repaired_b1 (test_at_own_val_threshold),0.0,0.0
+dual_lr,逻辑回归（双源特征，基线）,59,0.89,0.750344,0.290945,0.165219,0.379958,0.238549,0.293088,30299,49444,96715,58.25,127014,1496340,formal_training_repaired_b1 (test_at_own_val_threshold),-0.000598,0.107255
+power_only_xgb,XGBoost（仅 POWER 降雨）,51,0.05,0.723826,0.165407,0.081523,0.162067,0.25635,0.198586,32560,168345,94454,146.75,127014,1496340,formal_training_repaired_b1 (test_at_own_val_threshold),-0.027116,-0.018283
+static_only_xgb,XGBoost（仅静态地形）,40,0.07,0.720204,0.153489,0.076866,0.160982,0.554537,0.249527,70434,367093,56580,319.6,127014,1496340,formal_training_repaired_b1 (test_at_own_val_threshold),-0.030738,-0.030201
+rain_time_only_xgb,XGBoost（仅降雨+时间）,19,0.03,0.647036,0.127806,0.082114,0.13445,0.222968,0.167748,28320,182316,98694,153.86,127014,1496340,formal_training_repaired_b1 (test_at_own_val_threshold),-0.103906,-0.055884
+no_tide_xgb,XGBoost（去潮位消融）,55,0.04,0.75794,0.192946,0.079242,0.202669,0.375943,0.263361,47750,187856,79264,172.1,127014,1496340,supplement_tide_ablation_b1 (no_tide_test_own),0.006998,0.009256

@@ -62,10 +62,11 @@
 | 子目录 | 大小 | 说明 |
 |---|---|---|
 | `raw/` | 280 MB（~2,800+ 文件，nowcast 为主） | 原始响应按 `{source}/{YYYYMMDD}/` 归档 + `.meta.json`（URL/HTTP 状态/双时间戳）+ `fetch_log.jsonl`；**.gitignore 已排除** |
-| `latest/` | 1.7 MB | `snapshot.json|js`（5 源归一化快照）+ `grid_scores.json|js`（5,517 格历史评分，源自冻结预测） |
+| `latest/` | 1.7 MB | 仓库保留一份冻结演示版：`snapshot.json|js`（5 源归一化快照）+ `grid_scores.json|js`（5,517 格历史评分，源自冻结预测）；不得当作持续实时数据 |
 
 - 5 源：warnings / rhrread / hourlyRainfall / hhot / nowcast；每源 obs_time（官方产品时刻）与 fetch_time（管道获取时刻）分离；失败保留上次成功快照 + `stale:true`
 - **约束**：实时数据不得写入任何 `data/delivery_*` 或 `outputs/` 冻结目录；不得作为冻结模型输入对外展示「实时水浸概率」
+- **提交规则**：抓取循环产生的新快照默认只留在本机；替换仓库中的冻结演示快照前必须人工复核时间、来源、字段与差异
 
 ## 6. 关键实验产物数据（outputs/ 内，冻结）
 

@@ -17,6 +17,7 @@
 | nowcast | 未来 2h 网格降雨临近预报（HK bbox 裁剪后 ~900 格 × 4 步，~2km 分辨率） | 720s | 30 min |
 
 - **存储**：原始响应 `data/raw/{source}/{YYYYMMDD}/{source}_{HHMMSS}.{json|csv}` + 同名 `.meta.json`；日志 `data/raw/fetch_log.jsonl`；归一化快照 `data/latest/snapshot.json|js`
+- **仓库演示数据**：`data/latest/` 保留一份 2026-10-27 的冻结快照供新 clone 直接查看；它不会自动更新，也不得被描述为当前实时状态
 - **降级**：网络失败保留该源上次成功快照 + `stale:true` + `last_error`，不崩溃、不伪装实时
 - **修正 A 方清单 3 处口径**：HHOT 是天文潮预报非实测；nowcast ~2km 非 1km；nowcast 数据集 ID 已更正
 - 运行：`.venv/bin/python -m hko_api.hko_fetch --loop`（`--once` 单次；`--only warnings,rhrread` 部分源）
@@ -25,6 +26,7 @@
 
 - 只读输入：冻结 `predictions_test.parquet` + `gis/grid_risk_500m.csv`
 - 输出 `data/latest/grid_scores.json|js`：5,517 格，测试期均分 min 0.0001 / med 0.0049 / max 0.0990；双口径（测试期 2023-01~2026-09 / 全期 train+val+test）分别标注
+- 精选指标与结果图另见 `artifacts/model_summary/`；完整逐行预测、bundle 和实验目录仍不纳入 Git
 - 几何诚实：仅有格中心点，**未伪装网格边界**
 
 ## 3. 整合 Dashboard（`hko_api/dashboard.html`）— 已完成 ✅（8/8 E2E 通过）

@@ -1,0 +1,172 @@
+{
+  "created_at": "20261026-122643",
+  "run_kind": "paper_package_b1",
+  "read_only": true,
+  "data_sha256_ok": true,
+  "comparison_table": [
+    {
+      "model": "dual_xgb",
+      "model_label": "XGBoost（双源特征，主模型）",
+      "n_features": 59,
+      "threshold_val_frozen": 0.05,
+      "test_roc_auc": 0.750942,
+      "test_pr_auc": 0.18369,
+      "test_brier": 0.080114,
+      "test_precision": 0.19191,
+      "test_recall": 0.324075,
+      "test_f1": 0.241066,
+      "tp": 41162,
+      "fp": 173324,
+      "fn": 85852,
+      "alerts_per_day": 156.67,
+      "positives": 127014,
+      "n": 1496340,
+      "source": "formal_training_repaired_b1 (test_at_own_val_threshold)",
+      "delta_roc_vs_dual": 0.0,
+      "delta_pr_vs_dual": 0.0
+    },
+    {
+      "model": "dual_lr",
+      "model_label": "逻辑回归（双源特征，基线）",
+      "n_features": 59,
+      "threshold_val_frozen": 0.89,
+      "test_roc_auc": 0.750344,
+      "test_pr_auc": 0.290945,
+      "test_brier": 0.165219,
+      "test_precision": 0.379958,
+      "test_recall": 0.238549,
+      "test_f1": 0.293088,
+      "tp": 30299,
+      "fp": 49444,
+      "fn": 96715,
+      "alerts_per_day": 58.25,
+      "positives": 127014,
+      "n": 1496340,
+      "source": "formal_training_repaired_b1 (test_at_own_val_threshold)",
+      "delta_roc_vs_dual": -0.000598,
+      "delta_pr_vs_dual": 0.107255
+    },
+    {
+      "model": "power_only_xgb",
+      "model_label": "XGBoost（仅 POWER 降雨）",
+      "n_features": 51,
+      "threshold_val_frozen": 0.05,
+      "test_roc_auc": 0.723826,
+      "test_pr_auc": 0.165407,
+      "test_brier": 0.081523,
+      "test_precision": 0.162067,
+      "test_recall": 0.25635,
+      "test_f1": 0.198586,
+      "tp": 32560,
+      "fp": 168345,
+      "fn": 94454,
+      "alerts_per_day": 146.75,
+      "positives": 127014,
+      "n": 1496340,
+      "source": "formal_training_repaired_b1 (test_at_own_val_threshold)",
+      "delta_roc_vs_dual": -0.027116,
+      "delta_pr_vs_dual": -0.018283
+    },
+    {
+      "model": "static_only_xgb",
+      "model_label": "XGBoost（仅静态地形）",
+      "n_features": 40,
+      "threshold_val_frozen": 0.07,
+      "test_roc_auc": 0.720204,
+      "test_pr_auc": 0.153489,
+      "test_brier": 0.076866,
+      "test_precision": 0.160982,
+      "test_recall": 0.554537,
+      "test_f1": 0.249527,
+      "tp": 70434,
+      "fp": 367093,
+      "fn": 56580,
+      "alerts_per_day": 319.6,
+      "positives": 127014,
+      "n": 1496340,
+      "source": "formal_training_repaired_b1 (test_at_own_val_threshold)",
+      "delta_roc_vs_dual": -0.030738,
+      "delta_pr_vs_dual": -0.030201
+    },
+    {
+      "model": "rain_time_only_xgb",
+      "model_label": "XGBoost（仅降雨+时间）",
+      "n_features": 19,
+      "threshold_val_frozen": 0.03,
+      "test_roc_auc": 0.647036,
+      "test_pr_auc": 0.127806,
+      "test_brier": 0.082114,
+      "test_precision": 0.13445,
+      "test_recall": 0.222968,
+      "test_f1": 0.167748,
+      "tp": 28320,
+      "fp": 182316,
+      "fn": 98694,
+      "alerts_per_day": 153.86,
+      "positives": 127014,
+      "n": 1496340,
+      "source": "formal_training_repaired_b1 (test_at_own_val_threshold)",
+      "delta_roc_vs_dual": -0.103906,
+      "delta_pr_vs_dual": -0.055884
+    },
+    {
+      "model": "no_tide_xgb",
+      "model_label": "XGBoost（去潮位消融）",
+      "n_features": 55,
+      "threshold_val_frozen": 0.04,
+      "test_roc_auc": 0.75794,
+      "test_pr_auc": 0.192946,
+      "test_brier": 0.079242,
+      "test_precision": 0.202669,
+      "test_recall": 0.375943,
+      "test_f1": 0.263361,
+      "tp": 47750,
+      "fp": 187856,
+      "fn": 79264,
+      "alerts_per_day": 172.1,
+      "positives": 127014,
+      "n": 1496340,
+      "source": "supplement_tide_ablation_b1 (no_tide_test_own)",
+      "delta_roc_vs_dual": 0.006998,
+      "delta_pr_vs_dual": 0.009256
+    }
+  ],
+  "roc_pr_recomputed": {
+    "dual_xgb": {
+      "roc_auc": 0.750942,
+      "pr_auc": 0.18369
+    },
+    "dual_lr": {
+      "roc_auc": 0.750344,
+      "pr_auc": 0.290945
+    },
+    "power_only_xgb": {
+      "roc_auc": 0.723826,
+      "pr_auc": 0.165407
+    },
+    "static_only_xgb": {
+      "roc_auc": 0.720204,
+      "pr_auc": 0.153489
+    },
+    "rain_time_only_xgb": {
+      "roc_auc": 0.647036,
+      "pr_auc": 0.127806
+    },
+    "no_tide_xgb": {
+      "roc_auc": 0.75794,
+      "pr_auc": 0.192946
+    }
+  },
+  "rank_stability": {
+    "spearman_mean": 0.988753,
+    "top20_overlap": 9
+  },
+  "figure_files": [
+    "fig_paper_grid_risk_test_vs_full.png",
+    "fig_paper_rain_tide_heatmap.png",
+    "fig_paper_rank_stability.png",
+    "fig_paper_roc_pr_test.png",
+    "fig_paper_shap_top20.png"
+  ],
+  "total_seconds": 11.8
+}
