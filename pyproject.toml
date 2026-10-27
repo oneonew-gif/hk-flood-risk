@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "floodrisk"
+version = "0.1.0"
+description = "香港水浸风险预测建模框架（XGBoost + GIS）—— 模块 B：建模、评价、风险分级、GIS 导出"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "scikit-learn>=1.4",
+    "xgboost>=2.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+gis = ["geopandas>=0.14", "shapely>=2.0"]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# basetemp 指到项目内：避免污染系统临时目录，也方便查看 pytest 产生的中间文件
+addopts = "-q --basetemp=.pytest-tmp"
+filterwarnings = ["ignore::DeprecationWarning"]

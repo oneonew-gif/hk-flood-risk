@@ -1,0 +1,62 @@
+# ============================================================
+# 数据红线：data/ 整目录默认排除
+# 含 A 方真实交付（delivery_*）、合成数据（synthetic/）及一切派生数据。
+# 如确需公开示例数据：单独审核后在此添加白名单条目（如 !data/example/xxx），
+# 不得自动放行。
+# ============================================================
+/data/
+
+# 产物与实验输出（一律不入库；_audit 临时报告也在其中）
+outputs/
+
+# 研究报告 / 论文素材（内部文档，不入库；HANDOFF/ 交接文档入库）
+/reports/
+
+# 本地打包/归档（data.zip、outputs.zip、hko_api.zip 等，以及 data 2/ 副本与 归档/）
+*.zip
+/data\ 2/
+
+# HKO 抓取归档：原始快照体积大（nowcast 约 260 MB / 2,800+ 文件），不入库
+hko_api/data/raw/
+# HKO 运行时抓取的最新快照：自动生成、30 分钟即过期（B2 决策未定前不入库）
+hko_api/data/latest/
+
+# ---- 全局数据文件兜底：即使被误放到仓库其他位置也不入库 ----
+*.parquet
+*.xlsx
+*.xls
+*.gpkg
+*.shp
+*.shx
+*.dbf
+*.db
+*.sqlite
+*.sqlite3
+
+# 密钥与本地配置
+.env
+*.key
+*.pem
+secrets*
+configs/local*.yaml
+
+# 模型文件与日志
+*.ubj
+*.json.model
+*.pkl
+*.joblib
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest-tmp/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store

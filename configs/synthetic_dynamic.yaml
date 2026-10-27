@@ -1,0 +1,34 @@
+# 动态模式 · 合成数据
+# 唯一的用途：让整条管线在不接触真实数据的前提下跑通。
+extends: base.yaml
+
+project:
+  name: hk-flood-risk-synthetic-dynamic
+  provenance_override: SYNTHETIC
+
+task:
+  mode: dynamic
+  horizon_hours: 2
+  # 合成数据的标签由生成器按同一窗口长度构造，故此处置 true 只是声明"合成侧自洽"，
+  # 不代表任何真实数据口径已被验证。
+  label_horizon_verified: true
+  time_step_hours: 1
+
+data:
+  input_path: data/synthetic/panel_synthetic.csv
+  format: csv
+  grid_layer_path: data/synthetic/grids_synthetic.geojson
+  strict: false            # 合成脏数据要能"带伤跑通"并如实报告
+
+split:
+  strategy: temporal       # 同址未来时刻；正式结果建议同时附 spacetime
+  test_size: 0.2
+  val_size: 0.2
+
+tuning:
+  enabled: true
+  n_iter: 10               # 合成数据只为验证流程，不做深度调参
+
+tiering:
+  strategy: quantile
+  quantiles: [0.70, 0.90]

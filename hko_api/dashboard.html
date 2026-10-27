@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>香港水浸风险演示 Dashboard（历史评分 + 实时气象）</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+:root{--bg:#0f1720;--panel:#16222e;--line:#24384a;--txt:#dbe7f0;--dim:#8aa2b5;
+--ok:#3fbf7f;--stale:#f0a13f;--err:#e5484d;--accent:#4aa3e0}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--txt);font:14px/1.5 "PingFang TC","Microsoft JhengHei",system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}
+header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header h1{font-size:17px;margin:0}
+header .sub{color:var(--dim);font-size:12px}
+#stalebar{display:none;padding:6px 16px;background:#5a3a12;color:#ffd9a0;font-size:13px;border-bottom:1px solid var(--line)}
+#warnstrip{padding:6px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:22px}
+.wtag{padding:2px 10px;border-radius:4px;font-weight:600;font-size:13px;color:#111}
+main{flex:1;display:flex;min-height:0}
+#mapwrap{flex:1.6;min-width:0;position:relative}
+#map{position:absolute;inset:0}
+#side{flex:1;max-width:430px;overflow-y:auto;border-left:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.card h3{margin:0 0 8px;font-size:13.5px;color:var(--accent);display:flex;justify-content:space-between;align-items:center}
+.badge{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--dim);font-weight:400}
+.badge.obs{color:var(--ok)} .badge.fc{color:#7fb7e6} .badge.hist{color:#c9a2e0}
+.bar{height:9px;border-radius:3px;background:#0b1219;margin-top:2px}
+.bar>div{height:100%;border-radius:3px;background:var(--accent)}
+.row{display:flex;justify-content:space-between;font-size:12.5px;margin-top:3px;gap:8px}
+.row .n{color:var(--dim)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td,th{padding:3px 5px;border-bottom:1px solid var(--line);text-align:left}
+td.ok{color:var(--ok)} td.st{color:var(--stale)} td.er{color:var(--err)}
+.dis{color:var(--dim);font-size:11.5px;margin-top:6px}
+#legend{position:absolute;bottom:14px;left:10px;z-index:900;background:rgba(13,22,30,.92);
+border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:11.5px;pointer-events:none}
+.lg{display:flex;align-items:center;gap:6px;margin-top:2px}
+.sw{width:14px;height:9px;border-radius:2px;display:inline-block}
+footer{padding:6px 16px;border-top:1px solid var(--line);color:var(--dim);font-size:11.5px}
+.leaflet-popup-content{font-size:12.5px}
+.leaflet-container{background:#0b1219}
+</style>
+</head>
+<body>
+<header>
+  <h1>香港水浸风险演示 Dashboard</h1>
+  <span class="sub" id="gen">快照载入中…</span>
+  <span class="sub">实时气象 = HKO 官方数据 ｜ 地图评分 = 历史模型输出（弱监督探索性）</span>
+</header>
+<div id="stalebar"></div>
+<div id="warnstrip"></div>
+<main>
+  <div id="mapwrap"><div id="map"></div><div id="legend"></div></div>
+  <div id="side">
+    <div class="card"><h3>生效警告（HKO）<span class="badge obs">观测</span></h3><div id="warnbox">载入中…</div></div>
+    <div class="card"><h3>各区过去 1 小时最大雨量<span class="badge obs">观测</span></h3><div id="districts"></div><div class="dis" id="rfwin"></div></div>
+    <div class="card"><h3>自动气象站雨量 Top 8<span class="badge obs">观测</span></h3><div id="aws"></div></div>
+    <div class="card"><h3>鯷鱼涌天文潮 ±12h<span class="badge fc">官方预报</span></h3><div id="tide"></div><div class="dis">天文潮为调和预报（确定性过程，非实测）；序列已按小时末标注对齐。</div></div>
+    <div class="card"><h3>未来 2 小时降雨临近预报<span class="badge fc">官方预报</span></h3><div id="nowcast"></div><div class="dis">HKO 官方临时数据（provisional），约 12 分钟更新；可在地图右上角勾选预报图层查看网格分布。</div></div>
+    <div class="card"><h3>数据新鲜度</h3><div id="fresh"></div><div class="dis">隔离声明：实时气象数据仅存于 hko_api/data/（独立时间戳归档），与论文冻结数据集、模型、测试集预测、SHAP 及 GIS 历史评分完全隔离，互不写入。</div></div>
+  </div>
+</main>
+<footer>网格评分口径：①测试期（2023-01~2026-09）逐格平均 p_dual_xgb＝弱监督标签下探索性风险排序；②全期（train+val+test）GIS 产物平均。两者均为历史模型输出，<b>不是实时水浸发生概率</b>；未经验证，不构成任何预警指令。</footer>
+<script src="vendor/leaflet.js"></script>
+<script src="data/latest/snapshot.js"></script>
+<script src="data/latest/grid_scores.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const fmtHKT=s=>{if(!s)return "—";try{return new Date(s).toLocaleString("zh-HK",{timeZone:"Asia/Hong_Kong",hour12:false});}catch(e){return s;}};
+
+/* ---------- 数据载入：file:// 用注入脚本；http:// 每 60s 拉新 ---------- */
+let SNAP=window.HKO_SNAPSHOT||null,SCORES=window.HKO_GRID_SCORES||null;
+async function loadLive(){
+  if(location.protocol==="file:")return; // file:// 由 <script> 注入的打包快照渲染
+  try{const r=await fetch("data/latest/snapshot.json?t="+Date.now());SNAP=await r.json();
+      const r2=await fetch("data/latest/grid_scores.json?t="+Date.now());SCORES=await r2.json();
+      renderAll();}
+  catch(e){console.warn("快照刷新失败（保留当前显示）",e);}
+}
+
+/* ---------- 过期判定：服务端失败标记 OR 客户端按【获取时间】计算管道健康度。
+   注：obs_time（官方产品更新时刻）滞后墙钟属正常（如 nowcast 生成延迟），
+   不能作为本端过期依据；观测时间在面板中单独展示。 ---------- */
+function staleOf(entry){
+  if(!entry||entry.ok===false)return{st:true,why:"获取失败/无数据"};
+  if(entry.stale)return{st:true,why:"获取失败，显示上次成功快照"};
+  if(!entry.fetch_time)return{st:true,why:"缺少获取时间"};
+  const age=(Date.now()-new Date(entry.fetch_time))/60000;
+  if(age>entry.max_age_min)return{st:true,why:"快照获取于 "+Math.round(age)+" 分钟前且未再成功更新（阈值 "+entry.max_age_min+" 分钟）——当前可能已断网"};
+  return{st:false};
+}
+
+/* ---------- 地图 ---------- */
+const map=L.map("map",{center:[22.365,114.12],zoom:11,preferCanvas:true});
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap"}).addTo(map);
+let layerTest=null,layerAll=null,layerNow=null,nowOn=false;
+const RENDERER=L.canvas({padding:.3}); // 全部图层共享单一 renderer：多 canvas 会互相拦截点击
+const qcut=(a,q)=>{const s=a.filter(x=>x!=null).sort((x,y)=>x-y);return q.map(p=>s[Math.floor(p*(s.length-1))]);};
+const SCOLS=["#2f6db4","#57a05f","#e8c33f","#ef8a3c","#d64545"];
+const NCOL=m=>m<2?"#9ecae1":m<5?"#4292c6":m<10?"#2171b5":"#08306b";
+function popupHtml(g){
+  return "<b>网格 "+g.id+"</b><br>位置："+g.lat.toFixed(4)+"°N, "+g.lon.toFixed(4)+"°E<br>"
+  +"<span style='color:#c9a2e0'>历史评分·测试期(23.01~26.09)："+(g.test_mean==null?"—":g.test_mean.toFixed(4))+"</span><br>"
+  +"<span style='color:#c9a2e0'>历史评分·全期："+g.all_mean.toFixed(4)+"（全期排名 "+g.all_rank+"/5517）</span><br>"
+  +"<span style='color:#8aa2b5'>弱监督标签下探索性风险排序，非实时水浸概率</span>";}
+function buildScoreLayer(field){
+  const cuts=qcut(SCORES.grids.map(g=>g[field]),[0,.5,.8,.95,.995]);
+  const lg=L.layerGroup();
+  SCORES.grids.forEach(g=>{
+    let col=SCOLS[0];if(g[field]==null)col="#5b6b78";
+    else for(let i=cuts.length-1;i>=0;i--){if(g[field]>=cuts[i]){col=SCOLS[i];break;}}
+    const c=L.circleMarker([g.lat,g.lon],{renderer:RENDERER,radius:5,stroke:false,fillColor:col,fillOpacity:.85});
+    c.bindPopup(popupHtml(g));lg.addLayer(c);});
+  return {lg,cuts};
+}
+function buildLayers(){
+  if(!SCORES||!SCORES.grids)return;
+  const t=buildScoreLayer("test_mean"),a=buildScoreLayer("all_mean");
+  layerTest=t.lg;layerAll=a.lg;window._cuts={test_mean:t.cuts,all_mean:a.cuts};
+  layerTest.addTo(map);
+  L.control.layers({
+    "历史评分·测试期(2023-01~2026-09)":layerTest,
+    "历史评分·全期(train+val+test)":layerAll
+  },{}, {collapsed:false}).addTo(map);
+  map.on("baselayerchange",e=>renderLegend(e.name.includes("测试")?"test_mean":"all_mean"));
+  renderLegend("test_mean");
+}
+function renderLegend(field){
+  const c=(window._cuts||{})[field]||[];
+  $("legend").innerHTML=(field==="test_mean"?"历史评分·测试期(23.01~26.09)":"历史评分·全期(train+val+test)")+"<br>"
+    +SCOLS.map((col,i)=>"<span class='lg'><span class='sw' style='background:"+col+"'></span>"
+      +(i===0?"≤"+c[0].toFixed(4):c[i-1].toFixed(4)+" ~ "+c[i].toFixed(4))+"</span>").join("")
+    +"<div class='dis' style='margin:2px 0 0'>预报图层(勾选启用)：≥10 / 5–10 / 2–5 / 0.5–2 mm/30min 由深至浅蓝</div>";
+}
+function redrawNowcast(){
+  if(layerNow){map.removeLayer(layerNow);layerNow=null;}
+  const cells=(SNAP&&SNAP.sources.nowcast&&SNAP.sources.nowcast.cells)||[];
+  layerNow=L.layerGroup();
+  cells.forEach(c=>{if(c.m<0.5)return;
+    L.circleMarker([c.la,c.lo],{renderer:RENDERER,radius:7,stroke:false,fillColor:NCOL(c.m),fillOpacity:.55})
+     .bindPopup("预报 "+c.e.slice(11,16)+" 止半小时雨量<br>"+c.m+" mm/30min（HKO 官方预报）")
+     .addTo(layerNow);});
+  if(nowOn)layerNow.addTo(map);
+}
+function toggleNowcast(){
+  nowOn=!nowOn;
+  if(nowOn&&layerNow)layerNow.addTo(map);
+  else if(layerNow)map.removeLayer(layerNow);
+  const btn=$("ncbtn");if(btn)btn.textContent=nowOn?"预报图层：开":"预报图层：关";
+}
+
+/* ---------- 右侧面板 ---------- */
+function bar(v,max,col){const w=max>0?Math.min(100,v/max*100):0;
+  return "<div class='bar'><div style='width:"+w+"%;background:"+(col||"var(--accent)")+"'></div></div>";}
+function renderAll(){
+  if(!SNAP)return;
+  $("gen").textContent="快照生成："+fmtHKT(SNAP.generated_at)+"（HKT）";
+  // 警告
+  const w=SNAP.sources.warnings,ws=(w&&w.warnings)||{};
+  const WSTYLE={WRAINA:["#ffd23f","黄色暴雨警告"],WRAINR:["#e03131","红色暴雨警告"],WRAINB:["#1a1a1a","黑色暴雨警告"],
+    WFNTSA:["#ff922b","新界北部水浸特别提示"],WTS:["#ffe066","雷暴警告"],WL:["#b08968","山泥倾泻警告"],
+    WTCSGNL:["#ffa94d","热带气旋警告"],WMSGNL:["#74c0fc","强烈季候风信号"]};
+  let html="",strip="";
+  Object.values(ws).forEach(x=>{const st=WSTYLE[x.code]||["#ced4da",x.name||x.code];
+    html+="<div class='row'><span><span class='wtag' style='background:"+st[0]+";color:"+(x.code==="WRAINB"?"#fff":"#111")+"'>"+st[1]+"</span></span><span class='n'>发出 "+fmtHKT(x.issueTime)+"</span></div>";
+    strip+="<span class='wtag' style='background:"+st[0]+";color:"+(x.code==="WRAINB"?"#fff":"#111")+"'>"+st[1]+"</span>";});
+  $("warnbox").innerHTML=html||"<div class='row'><span class='n'>现时并无生效警告（HKO）</span><span class='n'>"+fmtHKT(w&&w.obs_time)+"</span></div>";
+  $("warnstrip").innerHTML=strip;
+  // 各区雨量
+  const r=SNAP.sources.rhrread,ds=(r&&r.districts)||[];
+  const dmax=Math.max(1,...ds.map(d=>d.max_mm||0));
+  $("districts").innerHTML=ds.map(d=>"<div class='row'><span>"+d.place+"</span><span>"+d.max_mm+" "+(d.unit||"mm")+"</span></div>"+bar(d.max_mm,dmax,"#4aa3e0")).join("");
+  $("rfwin").textContent=r?"统计窗口 "+fmtHKT(r.rainfall_start)+" ~ "+fmtHKT(r.rainfall_end)+"（HKT）":"";
+  // AWS Top8
+  const aws=((SNAP.sources.hourlyRainfall||{}).stations||[]).slice(0,8);
+  const amax=Math.max(1,...aws.map(a=>a.mm||0));
+  $("aws").innerHTML=aws.map(a=>"<div class='row'><span>"+a.station+"（"+a.id+"）</span><span>"+(a.mm==null?"—":a.mm+" mm")+"</span></div>"+bar(a.mm,amax,"#57a05f")).join("");
+  // 潮位
+  const t=(SNAP.sources.hhot||{}).series||[];
+  if(t.length>1){
+    const vals=t.map(p=>p[1]),lo=Math.min(...vals),hi=Math.max(...vals);
+    const W=380,H=90,X=i=>i/(t.length-1)*W,Y=v=>H-8-(v-lo)/((hi-lo)||1)*(H-20);
+    const nowIdx=t.findIndex(p=>new Date(p[0])>Date.now());
+    const pts=t.map((p,i)=>X(i)+","+Y(p[1])).join(" ");
+    $("tide").innerHTML="<svg viewBox='-2 -4 384 100' width='100%'>"
+      +"<polyline points='"+pts+"' fill='none' stroke='#7fb7e6' stroke-width='1.6'/>"
+      +(nowIdx>0?"<line x1='"+X(nowIdx)+"' y1='0' x2='"+X(nowIdx)+"' y2='"+H+"' stroke='#8aa2b5' stroke-dasharray='3 3'/><text x='"+(X(nowIdx)+3)+"' y='10' fill='#8aa2b5' font-size='9'>现在</text>":"")
+      +"<text x='2' y='10' fill='#8aa2b5' font-size='9'>"+t[0][0].slice(5,16).replace("T"," ")+"</text>"
+      +"<text x='"+(W-62)+"' y='10' fill='#8aa2b5' font-size='9'>"+t[t.length-1][0].slice(5,16).replace("T"," ")+"</text></svg>"
+      +"<div class='row'><span>范围 "+lo.toFixed(2)+"–"+hi.toFixed(2)+" m</span><span>序列最高 "+hi.toFixed(2)+" m</span></div>";
+  }else $("tide").innerHTML="<span class='n'>暂无序列</span>";
+  // nowcast 摘要
+  const nc=(SNAP.sources.nowcast||{}).steps||[];
+  const nmax=Math.max(.5,...nc.map(s=>s.mean_mm));
+  $("nowcast").innerHTML=nc.map(s=>"<div class='row'><span>至 "+s.ending.slice(11,16)+"</span><span>均 "+s.mean_mm+" ｜ 最大 "+s.max_mm+" mm/30min</span></div>"+bar(s.mean_mm,nmax,"#2171b5")).join("")
+    +(nc.length?"<div class='dis'>前瞻窗口 "+nc[0].ending.slice(11,16)+" → "+nc[nc.length-1].ending.slice(11,16)+"（4 个半小时步长）</div>":"");
+  redrawNowcast();
+  // 新鲜度
+  let staleAny=false,rows="";
+  Object.entries(SNAP.sources).forEach(([k,v])=>{
+    const s=staleOf(v);if(s.st)staleAny=true;
+    rows+="<tr><td>"+k+"</td><td class='"+(v.ok===false?"er":(s.st?"st":"ok"))+"'>"+(v.ok===false?"无数据":(s.st?"STALE":"OK"))+"</td>"
+    +"<td>"+fmtHKT(v.obs_time)+"</td><td>"+fmtHKT(v.fetch_time)+"</td></tr>";});
+  $("fresh").innerHTML="<table><tr><th>源</th><th>状态</th><th>观测时间</th><th>获取时间</th></tr>"+rows+"</table>"
+    +"<div class='dis'><button id='ncbtn' style='margin-top:4px'>"+(nowOn?"预报图层：开":"预报图层：关")+"</button>（未来 2h 网格预报叠加，官方数据）</div>";
+  const btn=$("ncbtn");if(btn)btn.onclick=toggleNowcast;
+  $("stalebar").style.display=staleAny?"block":"none";
+  if(staleAny)$("stalebar").innerHTML="⚠ 部分数据已过期或获取失败——当前显示的是<b>最后一次成功快照（历史存档）</b>，不代表实时状况。详见右栏数据新鲜度表。";
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  renderAll();
+  if(SCORES&&SCORES.grids)buildLayers();
+  if(location.protocol==="file:")$("gen").textContent+="（file:// 打包快照模式）";
+  loadLive();
+  setInterval(loadLive,60000);   // http 模式拉新快照
+  setInterval(()=>{if(SNAP)renderAll();},30000); // 重算过期状态
+});
+</script>
+</body>
+</html>

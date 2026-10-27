@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>香港 18 區氣象播報（官方觀測）</title>
+<style>
+:root{--bg:#0f1720;--panel:#16222e;--line:#24384a;--txt:#dbe7f0;--dim:#8aa2b5;
+--ok:#3fbf7f;--stale:#f0a13f;--err:#e5484d;--accent:#4aa3e0;--warn:#ffd23f}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--txt);font:14px/1.6 "PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0}
+.sub{color:var(--dim);font-size:12.5px}
+#stalebar{display:none;padding:8px 20px;background:#5a3a12;color:#ffd9a0;font-size:13px;border-bottom:1px solid var(--line)}
+main{max-width:1080px;margin:0 auto;padding:16px 20px 40px;display:grid;grid-template-columns:300px 1fr;gap:16px}
+@media (max-width:820px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card h3{margin:0 0 10px;font-size:14px;color:var(--accent);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{font-size:11px;padding:1px 8px;border-radius:10px;border:1px solid var(--line);color:var(--dim);font-weight:400;white-space:nowrap}
+.badge.ok{color:var(--ok);border-color:#245a3f}
+.badge.warn{color:var(--stale);border-color:#5a3a12}
+.badge.err{color:var(--err);border-color:#5a1d1f}
+#districts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dbtn{background:#0e1822;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:8px 10px;text-align:left;cursor:pointer;font:inherit;font-size:13px;display:flex;justify-content:space-between;gap:6px}
+.dbtn:hover{border-color:var(--accent)}
+.dbtn[aria-pressed="true"]{border-color:var(--accent);background:#17324a}
+.dbtn .v{color:var(--dim);font-variant-numeric:tabular-nums}
+.bulletin{font-size:15px;line-height:1.75}
+.bulletin h2{margin:0 0 8px;font-size:17px}
+.bulletin p{margin:4px 0}
+.bulletin .tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:12px;font-weight:600;color:#111;background:var(--accent)}
+.bulletin .tag.warn{background:var(--stale)} .bulletin .tag.err{background:var(--err);color:#fff}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:13px;margin-top:10px}
+.kv .k{color:var(--dim)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td,th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.ok{color:var(--ok)} td.st{color:var(--stale)} td.er{color:var(--err)}
+.wtag{padding:2px 10px;border-radius:4px;font-weight:600;font-size:13px;color:#111;display:inline-block;margin:2px 6px 2px 0}
+.notice{color:var(--dim);font-size:12px;margin-top:8px}
+.sep{margin-top:18px;border-top:1px dashed var(--line);padding-top:14px}
+a{color:var(--accent)}
+footer{max-width:1080px;margin:0 auto;padding:0 20px 24px;color:var(--dim);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>香港 18 區氣象播報</h1>
+  <span class="sub" id="gen">快照載入中…</span>
+  <span class="sub">僅展示香港天文台官方觀測；不含預測數值與水浸風險</span>
+</header>
+<div id="stalebar"></div>
+
+<main>
+  <section class="card">
+    <h3>選擇地區 <span class="badge" id="selstatus">—</span></h3>
+    <div id="districts"></div>
+    <div class="notice">區名與數值均直接取自天文台 <code>rhrread</code> 官方分區雨量，未經重算。</div>
+  </section>
+
+  <div>
+    <section class="card">
+      <h3 id="bhead">地區氣象播報 <span class="badge" id="blevel">—</span></h3>
+      <div class="bulletin" id="bulletin">載入中…</div>
+      <div class="kv">
+        <span class="k">過去 1 小時雨量</span><span id="kmm">—</span>
+        <span class="k">官方統計窗口</span><span id="kwin">—</span>
+        <span class="k">官方觀測時間</span><span id="kobs">—</span>
+        <span class="k">數據獲取時間</span><span id="kfetch">—</span>
+        <span class="k">更新狀態</span><span id="kstatus">—</span>
+      </div>
+      <div class="notice">播報由固定規則模板生成：雨量分級 + 全港警告狀態 + 時間戳。<b>不含任何未來降雨或水浸概率數值。</b><br>
+        雨量分級（無錄得 / 微量 / 小 / 中 / 大 / 暴雨）為<b>本產品展示規則</b>，並非香港天文台官方分級。</div>
+    </section>
+
+    <section class="card sep">
+      <h3>全港天氣警告 <span class="badge warn">全港級資訊</span></h3>
+      <div id="warnbox">載入中…</div>
+      <div class="notice">警告由天文台 <code>warnsum</code> 提供，屬<b>全港</b>級別，不代表所選地區專屬，也不代表本區水浸風險。</div>
+    </section>
+
+    <section class="card sep">
+      <h3>數據新鮮度</h3>
+      <table><tr><th>數據源</th><th>狀態</th><th>官方觀測時間</th><th>數據獲取時間</th></tr>
+      <tbody id="fresh"></tbody></table>
+      <div class="notice">狀態由「獲取時間」判定（管道健康度）；官方觀測時間滯後屬正常。失敗時保留最後成功快照並明確標註，不冒充即時。</div>
+    </section>
+
+    <section class="card sep">
+      <h3>歷史水浸風險（非實時 · 與上方氣象播報嚴格分開）</h3>
+      <p style="margin:0 0 8px">歷史模型評分（弱監督標籤下的探索性風險排序，2023-01–2026-09 測試期逐格平均）僅在獨立頁面展示，<b>不與本頁的實時氣象播報混合</b>；本頁不顯示任何分區風險分數。</p>
+      <p style="margin:0"><a id="riskmap" href="../dashboard.html">前往歷史風險地圖頁（另頁打開）</a></p>
+      <div class="notice">原因：目前不存在可靠的「500 m 網格 → 18 區」官方映射，且歷史評分為非實時產物，混合展示會造成「實時水浸概率」的誤讀。</div>
+    </section>
+  </div>
+</main>
+<footer>
+  資料來源：香港天文台開放數據 API（warnsum、rhrread）。本頁不展示分區未來 2 小時預報數值（官方 nowcast 無分區產品），亦不進行任何實時模型推理。
+</footer>
+
+<script src="../data/latest/snapshot.js"></script>
+<script src="bulletin.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let SNAP=window.HKO_SNAPSHOT||null;
+let selected=localStorage.getItem("hko_district")||"";
+let distKey="";
+
+const WSTYLE={WRAINA:["#ffd23f","黃色暴雨警告"],WRAINR:["#e03131","紅色暴雨警告"],WRAINB:["#1a1a1a","黑色暴雨警告"],
+  WFNTSA:["#ff922b","新界北部水浸特別提示"],WTS:["#ffe066","雷暴警告"],WL:["#b08968","山泥傾瀉警告"],
+  WTCSGNL:["#ffa94d","熱帶氣旋警告"],WMSGNL:["#74c0fc","強烈季候風信號"]};
+
+function staleOf(entry){
+  if(!entry)return{st:true,why:"無此數據源"};
+  if(entry.ok===false)return{st:true,why:"獲取失敗／無數據"};
+  if(entry.stale)return{st:true,why:"獲取失敗，顯示上次成功快照"};
+  if(!entry.fetch_time)return{st:true,why:"缺少獲取時間"};
+  const age=(Date.now()-new Date(entry.fetch_time))/60000;
+  if(age>entry.max_age_min)return{st:true,why:"快照獲取於 "+Math.round(age)+" 分鐘前且未再成功更新"};
+  return{st:false};
+}
+function windowText(r){
+  if(!r||!r.rainfall_start||!r.rainfall_end)return null;
+  const a=new Date(r.rainfall_start),b=new Date(r.rainfall_end);
+  const f=d=>d.toLocaleTimeString("zh-HK",{timeZone:"Asia/Hong_Kong",hour12:false});
+  return f(a)+" – "+f(b);
+}
+
+/* ---------- 选择器 ---------- */
+function renderSelector(){
+  const r=SNAP&&SNAP.sources&&SNAP.sources.rhrread;
+  const ds=(r&&r.districts)||[];
+  const key=ds.map(d=>d.place).join("|");
+  if(key!==distKey){
+    distKey=key;
+    if(!ds.length){$("districts").innerHTML="<div class='badge err'>官方分區數據不可用</div>";return;}
+    if(!selected||!ds.some(d=>d.place===selected))selected=ds[0].place;
+    $("districts").innerHTML=ds.map(d=>{
+      const v=(d.max_mm===null||d.max_mm===undefined)?"缺測":d.max_mm+" mm";
+      return "<button class='dbtn' data-place='"+esc(d.place)+"' aria-pressed='"+(d.place===selected)+"'>"
+        +"<span>"+esc(d.place)+"</span><span class='v'>"+v+"</span></button>";
+    }).join("");
+    $("districts").querySelectorAll(".dbtn").forEach(b=>b.onclick=()=>{
+      selected=b.dataset.place;localStorage.setItem("hko_district",selected);
+      renderSelector();renderBulletin();});
+  }else{
+    $("districts").querySelectorAll(".dbtn").forEach(b=>{
+      b.setAttribute("aria-pressed",String(b.dataset.place===selected));});
+  }
+}
+
+/* ---------- 播报 ---------- */
+function renderBulletin(){
+  const r=SNAP&&SNAP.sources&&SNAP.sources.rhrread;
+  const ds=(r&&r.districts)||[];
+  const d=ds.find(x=>x.place===selected);
+  const st=staleOf(r);
+  const warnings=(SNAP&&SNAP.sources&&SNAP.sources.warnings&&SNAP.sources.warnings.warnings)||null;
+
+  const ctx={
+    place:selected||"所選地區",
+    mm:(d&&d.max_mm!==undefined)?d.max_mm:null,
+    window:windowText(r),
+    obsTime:r&&r.obs_time, fetchTime:r&&r.fetch_time,
+    stale:st.st, staleReason:st.why,
+    warnings, ok:!!(r&&r.ok!==false&&ds.length)
+  };
+  const out=buildBulletin(ctx);
+
+  $("blevel").textContent=out.level;
+  $("blevel").className="badge "+(out.tone||"");
+  $("bulletin").innerHTML="<h2>"+esc(out.headline)+"</h2>"+out.body.map(t=>"<p>"+esc(t)+"</p>").join("");
+  $("kmm").textContent=(ctx.mm===null?"缺測（不以推算代替）":ctx.mm+" 毫米 / 1 小時");
+  $("kwin").textContent=ctx.window||"—";
+  $("kobs").textContent=fmtTime(ctx.obsTime);
+  $("kfetch").textContent=fmtTime(ctx.fetchTime);
+  $("kstatus").textContent=st.st?("過期／失敗："+st.why):"正常（獲取時間在時效內）";
+  $("selstatus").textContent=ds.length?ds.length+" 區可選":"無分區數據";
+  $("selstatus").className="badge "+(ds.length?"ok":"err");
+}
+
+function renderWarnings(){
+  const w=SNAP&&SNAP.sources&&SNAP.sources.warnings;
+  const ws=(w&&w.warnings)||{};
+  const items=Object.values(ws);
+  const st=staleOf(w);
+  if(!w||w.ok===false){
+    $("warnbox").innerHTML="<div class='badge err'>警告數據不可用</div><p class='notice'>接口本次未返回有效數據，不顯示任何推測內容。</p>";
+    return;
+  }
+  let html="";
+  if(items.length){
+    html=items.map(x=>{const s=WSTYLE[x.code]||["#ced4da",x.name||x.code];
+      return "<span class='wtag' style='background:"+s[0]+";color:"+(x.code==="WRAINB"?"#fff":"#111")+"'>"+esc(s[1])+"</span>";}).join("")
+      +"<div class='notice'>發出時間："+items.map(x=>fmtTime(x.issueTime)).join("；")+"</div>";
+  }else{
+    html="<p style='margin:0'>現時沒有生效警告。</p>";
+  }
+  if(st.st)html+="<p class='notice' style='color:var(--stale)'>⚠ 此為上次成功快照（"+st.why+"），可能已不代表現時狀況。</p>";
+  $("warnbox").innerHTML=html;
+}
+
+function renderFresh(){
+  const rows=["warnings","rhrread"].map(k=>{
+    const v=SNAP.sources[k]||{};const s=staleOf(v);
+    return "<tr><td>"+k+"</td><td class='"+(v.ok===false?"er":(s.st?"st":"ok"))+"'>"
+      +(v.ok===false?"無數據":(s.st?"STALE":"OK"))+"</td><td>"+fmtTime(v.obs_time)+"</td><td>"+fmtTime(v.fetch_time)+"</td></tr>";
+  }).join("");
+  $("fresh").innerHTML=rows;
+  const any=["warnings","rhrread"].some(k=>staleOf(SNAP.sources[k]||{}).st);
+  $("stalebar").style.display=any?"block":"none";
+  if(any)$("stalebar").innerHTML="⚠ 部分氣象數據已過期或獲取失敗——頁面顯示的是<b>最後一次成功快照</b>，不代表現時天氣。";
+}
+
+function renderAll(){
+  if(!SNAP){$("bulletin").textContent="尚未取得任何快照，請確認數據抓取程序是否運行。";return;}
+  $("gen").textContent="快照生成："+fmtTime(SNAP.generated_at)+"（HKT）";
+  renderSelector();renderBulletin();renderWarnings();renderFresh();
+}
+
+async function loadLive(){
+  if(location.protocol==="file:")return;
+  try{
+    const r=await fetch("../data/latest/snapshot.json?t="+Date.now());
+    SNAP=await r.json();renderAll();
+  }catch(e){console.warn("快照刷新失敗（保留當前顯示）",e);}
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  renderAll();
+  if(location.protocol==="file:")$("gen").textContent+="（file:// 打包快照模式）";
+  loadLive();setInterval(loadLive,60000);
+  setInterval(()=>{if(SNAP)renderAll();},30000);
+});
+</script>
+</body>
+</html>

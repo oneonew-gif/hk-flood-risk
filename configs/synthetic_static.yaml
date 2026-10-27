@@ -1,0 +1,36 @@
+# 静态易发性模式 · 合成数据
+# 一个网格一行，无时间维度；禁止时序特征（base.yaml 已定义，这里清空以通过校验）。
+extends: base.yaml
+
+project:
+  name: hk-flood-risk-synthetic-static
+  provenance_override: SYNTHETIC
+
+task:
+  mode: static
+  horizon_hours: 0
+
+data:
+  input_path: data/synthetic/static_synthetic.csv
+  format: csv
+  grid_layer_path: data/synthetic/grids_synthetic.geojson
+  strict: false
+
+features:
+  temporal:
+    lags: []
+    rolling_windows: []
+
+split:
+  strategy: spatial_block   # 静态模式只能按空间切，时间切分在物理上无意义
+  test_size: 0.25
+  val_size: 0.25
+  spatial_blocks: 6
+
+tuning:
+  enabled: true
+  n_iter: 10
+
+tiering:
+  strategy: quantile
+  quantiles: [0.70, 0.90]

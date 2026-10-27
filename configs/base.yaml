@@ -1,0 +1,204 @@
+# =============================================================================
+# base.yaml —— 所有默认值的唯一来源。代码里不写魔法默认值。
+# 换真实数据时，通常只改 data 段（input_path / columns / grid_layer_path）。
+# =============================================================================
+
+project:
+  name: hk-flood-risk
+  # 由数据源自动判定（合成数据旁挂 *.provenance.json），此处可强制覆盖：
+  # REAL | SYNTHETIC  留空表示信任数据侧声明
+  provenance_override: null
+
+task:
+  # dynamic        —— 面板数据（网格 × 时间），可用时序特征，预测"某时刻某网格"的概率
+  # static         —— 一个网格一行，输出长期易发性，禁止时序特征
+  mode: dynamic
+  target: flood_label
+  positive_class: 1
+  time_step_hours: 1        # 数据时间分辨率
+  # ---- 行的时间锚（dynamic 专用，决定最小合法 lag 由什么决定）----
+  # issue_time —— 行时间戳 = 预测发起时刻；标签 = [t, t+horizon) 内是否水浸。
+  #               特征只要在 t 已观测完即可用，最小滞后由 data.time_conventions
+  #               推出，与 horizon 无关。业务口径，预警场景用这个。
+  # window_end  —— 行时间戳 = 标签窗口末端；特征必须整段早于窗口打开，
+  #               最小滞后 = horizon_steps + 上报延迟。复盘/归因口径。
+  anchor: issue_time
+  # horizon 只作用于标签侧：定义要预测的未来窗口长度，不再约束特征滞后
+  horizon_hours: 2
+  # 标签口径是否已由数据提供方**书面确认**严格对应 (t, t+horizon_hours]。
+  # false 时：非 SYNTHETIC 数据一律拒绝训练（是中止，不是警告后继续）。
+  # 合成数据由生成器按同一窗口构造，不受此闸门限制。
+  # !! 把它改成 true 是"人声明口径正确"，不是程序验证过口径正确。
+  label_horizon_verified: false
+
+data:
+  input_path: data/synthetic/panel.csv
+  format: csv               # csv | parquet | xlsx
+  grid_layer_path: data/synthetic/grids.geojson   # 无几何时可留空
+  timezone: Asia/Hong_Kong
+  # 真实列名映射：canonical -> 数据里的实际列名。留空则按 schema 别名自动匹配。
+  # 例：{rainfall: RF_1h, tide: tide_mCD, elevation: DEM_m}
+  columns: {}
+  # ---- 时间戳约定（决定每个观测变量的最小合法滞后）----
+  # aggregate: interval（时段累计）必须声明 anchor（时间戳=时段起点 start / 终点 end）；
+  #            instantaneous（瞬时读数）与 static（不随时间变化）不需要。
+  # reporting_delay_steps: 时间戳之后多少步数据才可拿到。
+  # !! 以下取值按天文台惯例假设（整点值=过去时段累计），待 A 书面确认后修正；
+  #    确认之前 min_lag_policy 保持 conservative 兜底。
+  time_conventions:
+    rainfall:    {aggregate: interval, anchor: end, reporting_delay_steps: 0}
+    tide:        {aggregate: instantaneous, reporting_delay_steps: 0}
+    wind_speed:  {aggregate: interval, anchor: end, reporting_delay_steps: 0}
+    tide_ast:    {aggregate: instantaneous, deterministic: true}
+  units:                    # 仅作文档与越界提示用，不参与计算
+    rainfall: mm
+    tide: mCD
+    wind_speed: m/s
+    elevation: m
+    population: count
+  # 默认 false：不删除任何真实数据。完全重复行会被中止并报告；
+  # 主键相同但字段冲突的记录一律中止（框架不替人裁定孰对孰错）。
+  # 确认可安全去重后，显式改为 true 才允许丢弃"完全重复"行。
+  drop_duplicates: false
+  strict: false             # true 时任何校验失败即中止（真实数据阶段建议开）
+
+features:
+  include: []               # 留空 = 自动使用所有可用可选特征
+  exclude: []               # 显式剔除的列（例如质量差的代理指标）
+  temporal:                 # 仅 dynamic 模式生效
+    # 最小合法滞后策略（仅 issue_time 口径生效）：
+    #   conservative（默认）—— 固定 1。A 确认时间戳约定前的保守值：
+    #     放弃最近一小时雨量，杜绝"整点=时段起点还是终点"读反导致的整批泄漏
+    #   derived —— 按 data.time_conventions 逐变量推出（end 锚定 + 0 延迟 = 允许 lag 0）
+    min_lag_policy: conservative
+    lags: [1, 2, 3, 6, 12]
+    rolling_windows: [3, 6]
+    rolling_stats: [mean, max]
+  forecast:
+    # 预报类特征：发起时刻已知的未来值。天文潮是确定性过程，
+    # [t, t+horizon) 的潮位在 t 完全可知且无泄漏 —— "雨量+潮汐顶托"叙事的关键特征。
+    # NWP 预报雨等非确定性预报量，等 A 交付并带发行时刻戳后再启用。
+    enabled: true
+    variables: [tide_ast]
+    window_stats: [max, mean]
+  vulnerability:
+    # 用户决定：可配置，默认关闭。原因见 README「为什么人口不进模型」
+    in_model: false
+    columns: [population, vulnerability_score]
+
+split:
+  # auto        —— dynamic: temporal；static: spatial_block
+  # random      —— 仅用于合成数据冒烟测试，真实数据不要用
+  # temporal    —— 按时间切，同址未来时刻（贴近业务运行场景）
+  # spatial_block —— 按空间块整体切，未见地点（防空间泄漏）
+  # spacetime   —— 未见的空间块 + 未来时段（最严格，建议正式报告附此结果）
+  strategy: auto
+  test_size: 0.2
+  val_size: 0.2
+  spatial_block_column: null   # 若数据自带 district / admin_id，填列名
+  spatial_blocks: 8            # 无该列时，用 KMeans 在网格质心(x,y)上聚成 N 块
+  buffer_meters: 0             # 预留：>0 时剔除测试块周边 N 米内的训练样本
+  # 标签是 [t, t+horizon) 的窗口。true 时在 train/val、val/test 之间剥离
+  # horizon 长度的清洗带（purge），避免两段共享同一批"水浸事件"导致评估偏乐观。
+  # 代价是每段末尾损失几小时样本，会被记入 meta.purged_rows。
+  purge_horizon: true
+  seed: 42
+  cv_folds: 5
+
+train:
+  backend: xgboost
+  params:
+    n_estimators: 400
+    max_depth: 4
+    learning_rate: 0.05
+    subsample: 0.9
+    colsample_bytree: 0.9
+    min_child_weight: 1
+    reg_lambda: 1.0
+    reg_alpha: 0.0
+    gamma: 0.0
+  early_stopping_rounds: 50
+  eval_metric: aucpr          # 不平衡下比 auc 更敏感
+  imbalance:
+    strategy: scale_pos_weight # none | scale_pos_weight | max_delta_step
+    scale_pos_weight: auto     # auto = neg/pos；也可给数值
+    max_delta_step: 0
+  random_state: 42
+  n_jobs: -1
+
+tuning:
+  # 默认关闭：正式调参必须由项目负责人显式批准后再开启。
+  enabled: false
+  backend: random             # random | grid | optuna（optuna 需另装）
+  n_iter: 40
+  metric: average_precision   # 主选指标：PR-AUC
+  search_space:
+    max_depth: [3, 4, 5, 6]
+    learning_rate: [0.02, 0.03, 0.05, 0.08, 0.1]
+    subsample: [0.7, 0.8, 0.9, 1.0]
+    colsample_bytree: [0.7, 0.8, 0.9, 1.0]
+    min_child_weight: [1, 3, 5]
+    reg_lambda: [0.5, 1.0, 2.0, 5.0]
+
+evaluation:
+  threshold_grid:
+    start: 0.01
+    stop: 0.99
+    step: 0.01
+  report_splits: [val, test]
+  importance: [gain, weight, cover, permutation]
+  permutation_repeats: 5
+
+calibration:
+  method: none                # none | platt | isotonic
+  min_val_samples: 200        # 验证集样本不足时告警"校准不可靠"
+
+tiering:
+  # fixed            —— 必须显式给 cutoffs，缺则报错退出（不提供默认值兜底）
+  # quantile         —— 按验证集概率分布分位切
+  # optimize_recall  —— 在满足高风险档目标召回的前提下压低中风险误报
+  # cost             —— 给定漏报/误报代价比，最小化期望代价
+  strategy: quantile
+  quantiles: [0.70, 0.90]     # 占位值，仅 strategy=quantile 生效；写进 manifest 供追溯
+  cutoffs: null               # strategy=fixed 时必填，例如 [0.25, 0.55]
+  labels: [low, medium, high]
+  fit_on: val                 # 阈值在 val 上定、冻结后应用到 test
+  optimize_recall:
+    target_recall_high: 0.85
+  cost:
+    cost_false_negative: 10
+    cost_false_positive: 1
+
+vulnerability_overlay:
+  enabled: true
+  score_column: vulnerability_score
+  quantiles: [0.50, 0.80]     # 脆弱性分低/中/高
+  matrix:                     # 风险档(行) × 脆弱档(列) → 优先级
+    high:   {low: P2, medium: P1, high: P1}
+    medium: {low: P3, medium: P2, high: P1}
+    low:    {low: P4, medium: P3, high: P2}
+
+leakage:
+  forbidden_exact: []
+  # 命中即中止，不给"手滑加进去"的机会
+  forbidden_patterns:
+    - "^flood_(depth|report|incident|count|claims?)"
+    - "^response_"
+    - "^drainage_(clearance|inspection|work)"
+    - "^post_"
+    - "_(after|post|future|next)$"
+  warn_univariate_auc: 0.97   # 单变量 AUC 超过此值 → 疑似泄漏，告警
+
+gis:
+  grid_id_column: grid_id
+  crs: EPSG:4326
+  metric_crs: EPSG:2326       # HK1980 Grid，距离类计算用
+  lon_column: lon
+  lat_column: lat
+  require_full_match: true    # 关联率不足 100% 即非零退出
+  exports: [csv, geojson, gpkg]
+
+output:
+  dir: outputs
+  save_model: true
+  save_predictions: true
